@@ -4,6 +4,19 @@ import Box from '../src/components/Box'
 import { AlurakutMenu, OrkutNostalgicIconSet, AlurakutProfileSidebarMenuDefault } from '../src/lib/AlurakutCommons';
 import React from 'react';
 
+function ProfileRelationsBox(prop) {
+  return (
+    <ProfileRelationsBoxWrapper>
+      <h2 className="smallTitle"> {prop.title} ({prop.item.length})</h2>
+
+      <ul>
+
+      </ul>
+    </ProfileRelationsBoxWrapper>
+
+  )
+}
+
 function ProfileSidebar(prop) {
   return (
     <Box as="aside">
@@ -22,12 +35,6 @@ function ProfileSidebar(prop) {
 }
 
 export default function Home() {
-  
-  const [comunit, setComunit ] = React.useState([{
-    id: new Date().toISOString(),
-    title:'Eu odeio acordar cedo',
-    image:'https://alurakut.vercel.app/capa-comunidade-01.jpg'
-  }]);
 
   const githubUser = 'blandow';
   const friendList = [
@@ -38,6 +45,20 @@ export default function Home() {
     'leandrosdias'
 
   ];
+
+  const [followers, setFollowers] = React.useState([]);
+
+  React.useEffect(() => fetch('https://api.github.com/users/peas/followers')
+    .then((res) => res.json())
+    .then((resServer) => setFollowers(resServer)), []);
+
+  const [comunit, setComunit] = React.useState([{
+    id: new Date().toISOString(),
+    title: 'Eu odeio acordar cedo',
+    image: 'https://alurakut.vercel.app/capa-comunidade-01.jpg'
+  }]);
+
+
   return (
     <>
 
@@ -92,6 +113,7 @@ export default function Home() {
         </div>
 
         <div className="profileRelationsArea" style={{ gridArea: 'profileRelationsArea' }}>
+          <ProfileRelationsBox title="followers" item={followers} />
           <ProfileRelationsBoxWrapper>
             <ul>
               {
@@ -99,7 +121,7 @@ export default function Home() {
 
                   return (
 
-                    <li key = {item.id}>
+                    <li key={item.id}>
                       <a href={`/users/${item.title}`} >
                         <img src={item.image} />
                         <span>{item.title}</span>
