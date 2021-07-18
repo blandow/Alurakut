@@ -1,8 +1,10 @@
 import { ProfileRelationsBoxWrapper } from '../src/components/ProfileRelations';
-import MainGrid from '../src/components/MainGrid'
-import Box from '../src/components/Box'
+import MainGrid from '../src/components/MainGrid';
+import Box from '../src/components/Box';
 import { AlurakutMenu, OrkutNostalgicIconSet, AlurakutProfileSidebarMenuDefault } from '../src/lib/AlurakutCommons';
 import React from 'react';
+import nookies from 'nookies';
+import jwt from 'jsonwebtoken';
 
 function ProfileRelationsBox(prop) {
   return (
@@ -34,9 +36,9 @@ function ProfileSidebar(prop) {
   )
 }
 
-export default function Home() {
+export default function Home(props) {
 
-  const githubUser = 'blandow';
+  const githubUser = props.githubUser;
   const friendList = [
     'blandow',
     'acnelio',
@@ -50,13 +52,32 @@ export default function Home() {
 
   React.useEffect(() => fetch('https://api.github.com/users/peas/followers')
     .then((res) => res.json())
-    .then((resServer) => setFollowers(resServer)), []);
+    .then((resServer) => { setFollowers(resServer); }), []);
 
-  const [comunit, setComunit] = React.useState([{
-    id: new Date().toISOString(),
-    title: 'Eu odeio acordar cedo',
-    image: 'https://alurakut.vercel.app/capa-comunidade-01.jpg'
-  }]);
+  const [comunit, setComunit] = React.useState([]);
+
+  fetch('https://graphql.datocms.com/', {
+    method: 'POST',
+    headers: {
+      'Authorization': '3695c0bd0c7d88ad1492cb061a739c',
+      'Content-Type': 'aplication/json',
+      'Accept': 'aplication/json',
+    },
+    body: JSON.stringify({
+      "query": `query {
+      allComunits{
+        title
+        idComunit
+        imageLink
+      }
+    }`})
+  })
+    .then((res) => res.json())
+    .then((completeRes) => {
+      setComunit(completeRes.data.allCommunities)
+
+    });
+
 
 
   return (
@@ -81,12 +102,26 @@ export default function Home() {
               evt.preventDefault();
               const formData = new FormData(evt.target);
               const comunitObj = {
-                id: new Date().toISOString(),
+
                 title: formData.get("title"),
-                image: formData.get("image"),
+                imageLink: formData.get("image"),
               }
-              const fillComunit = [...comunit, comunitObj]
-              setComunit(fillComunit);
+
+              fetch('/api/comunit', {
+                method: 'POST',
+                header: {
+                  'Content-Type': 'application/json',
+                },
+
+                body: JSON.stringify(comunitObj)
+              })
+                .then(async (response) => {
+                  const data = await response.json();
+                  const createdComunit = data.createdData;
+
+                  const fillComunit = [...comunit, createdComunit];
+                  setComunit(fillComunit);
+                })
             }}>
               <div>
 
@@ -121,9 +156,9 @@ export default function Home() {
 
                   return (
 
-                    <li key={item.id}>
-                      <a href={`/users/${item.title}`} >
-                        <img src={item.image} />
+                    <li key={item.idComunit}>
+                      <a href={`/comunits/${item.idComunit}`} >
+                        <img src={item.imageLink} />
                         <span>{item.title}</span>
                       </a>
                     </li>
@@ -152,4 +187,33 @@ export default function Home() {
       </MainGrid>
     </>
   )
+}
+
+
+
+export async function getServerSideProps(context) {
+  const token = nookies.get(context).USER_TOKEN;
+  
+
+  const { isAuthenticated } = await fetch('https://alurakut.vercel.app/api/auth', {
+    headers: {
+      Authorization: token
+    }
+  })
+    .then((res) => res.json())
+
+  if(!isAuthenticated){
+    return{
+      redirect:{
+        destination:'/login',
+        permanent:false
+      }
+    }
+  }
+  const { githubUser } = jwt.decode(token);
+  return {
+    props: {
+      githubUser
+    }, // will be passed to the page component as props
+  }
 }
